@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual">
 <title>Rekenen</title>
 <meta name="description" content="Oefen maal- en deeltafels en plus- en minsommen tot 100.">
 <link rel="manifest" href="manifest.webmanifest">
@@ -25,11 +25,15 @@
   }
   body {
     display: flex;
+    align-items: flex-start;
     min-height: 100vh;
     min-height: 100dvh;          /* 100vh is op mobiel de grote viewport */
   }
   #app {
-    margin: auto;              /* centers both axes, stays scrollable when tall */
+    /* Bovenaan uitlijnen, niet verticaal centreren: een schermtoetsenbord
+       maakt de viewport kleiner, en gecentreerd springt de hele inhoud dan
+       op en neer telkens als dat toetsenbord verschijnt of verdwijnt. */
+    margin: 0 auto;
     width: 100%;
     max-width: 640px;
     padding: max(32px, env(safe-area-inset-top))
@@ -220,6 +224,10 @@
     .next-btn:hover { opacity: .85; }
     .next-btn:disabled:hover { opacity: .3; }
     .start-btn:disabled:hover { opacity: .3; }
+    /* Een toestel met muis heeft geen schermtoetsenbord dat de viewport
+       verkleint, dus daar mag de inhoud wel gecentreerd blijven staan. */
+    body { align-items: center; }
+    #app { margin: auto; }
   }
 
   #confetti {

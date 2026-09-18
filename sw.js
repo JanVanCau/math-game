@@ -1,6 +1,6 @@
 /* Service worker voor "Rekenen oefenen".
    Bump CACHE bij elke deploy, anders blijft de oude versie hangen. */
-var CACHE = 'rekenen-v2';
+var CACHE = 'rekenen-v3';
 
 // Alles relatief: de site staat op /math-game/, niet op de root.
 // './' en './index.html' zijn aparte cache-keys, dus allebei nodig.
