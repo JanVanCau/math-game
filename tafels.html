@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tafels oefenen</title>
+<title>Rekenen oefenen</title>
 <style>
   * { box-sizing: border-box; }
   html, body {
@@ -33,6 +33,41 @@
     font-size: 15px;
     margin: 0 0 32px;
   }
+
+  /* Mode screen */
+  .mode-btn {
+    display: block;
+    width: 100%;
+    padding: 24px;
+    margin-bottom: 14px;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: left;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fff;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all .12s ease;
+  }
+  .mode-btn:hover { border-color: #2563eb; }
+  .mode-btn .mode-desc {
+    display: block;
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #888;
+  }
+  .back-btn {
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: #888;
+    cursor: pointer;
+  }
+  .back-btn:hover { color: #1a1a1a; }
 
   /* Setup screen */
   .section-label {
@@ -169,8 +204,23 @@
 <canvas id="confetti" class="hidden"></canvas>
 <div id="app">
 
-  <!-- SETUP -->
-  <div id="setup">
+  <!-- MODE -->
+  <div id="mode">
+    <h1>Rekenen oefenen</h1>
+    <p class="subtitle">Wat wil je oefenen?</p>
+    <button class="mode-btn" id="modeTablesBtn">
+      Tafels
+      <span class="mode-desc">Maal en deel met de tafels van 1 tot 10</span>
+    </button>
+    <button class="mode-btn" id="modePlusMinusBtn">
+      Plus en min
+      <span class="mode-desc">Optellen en aftrekken tot 100</span>
+    </button>
+  </div>
+
+  <!-- SETUP (tafels) -->
+  <div id="setup" class="hidden">
+    <button class="back-btn" id="backBtn">← Ander spel</button>
     <h1>Tafels oefenen</h1>
     <p class="subtitle">Kies welke tafels je wil oefenen en beantwoord 10 vragen.</p>
     <p class="section-label">Basisgetallen</p>
@@ -201,7 +251,9 @@
 <script>
 (function () {
   var NUM_QUESTIONS = 10;
+  var MAX_VALUE = 100;          // alle getallen én antwoorden blijven tussen 0 en 100
   var selected = new Set();
+  var mode = 'tables';          // 'tables' of 'plusminus'
   var questions = [];
   var current = 0;
   var results = [];
@@ -237,7 +289,7 @@
 
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-  function buildQuestions() {
+  function buildTableQuestions() {
     var bases = Array.from(selected);
     var qs = [];
     for (var q = 0; q < NUM_QUESTIONS; q++) {
@@ -254,7 +306,31 @@
     return qs;
   }
 
+  // Optellen: a + b met a, b ≥ 1 en a + b ≤ 100.
+  // Aftrekken: a - b met b ≥ 1 en a - b ≥ 1, dus alles blijft tussen 0 en 100.
+  function buildPlusMinusQuestions() {
+    var qs = [];
+    for (var q = 0; q < NUM_QUESTIONS; q++) {
+      var isMinus = Math.random() < 0.5;
+      if (isMinus) {
+        var a = randInt(2, MAX_VALUE);
+        var b = randInt(1, a - 1);
+        qs.push({ text: a + ' − ' + b + ' = ?', answer: a - b });
+      } else {
+        var x = randInt(1, MAX_VALUE - 1);
+        var y = randInt(1, MAX_VALUE - x);
+        qs.push({ text: x + ' + ' + y + ' = ?', answer: x + y });
+      }
+    }
+    return qs;
+  }
+
+  function buildQuestions() {
+    return mode === 'plusminus' ? buildPlusMinusQuestions() : buildTableQuestions();
+  }
+
   // --- Screens ---
+  var modeEl = document.getElementById('mode');
   var setupEl = document.getElementById('setup');
   var quizEl = document.getElementById('quiz');
   var resultEl = document.getElementById('result');
@@ -266,20 +342,37 @@
   var nextBtn = document.getElementById('nextBtn');
 
   function show(el) {
+    modeEl.classList.add('hidden');
     setupEl.classList.add('hidden');
     quizEl.classList.add('hidden');
     resultEl.classList.add('hidden');
     el.classList.remove('hidden');
   }
 
-  startBtn.addEventListener('click', function () {
+  function startQuiz() {
     questions = buildQuestions();
     current = 0;
     results = [];
     startTime = Date.now();
     show(quizEl);
     renderQuestion();
+  }
+
+  document.getElementById('modeTablesBtn').addEventListener('click', function () {
+    mode = 'tables';
+    show(setupEl);
   });
+
+  document.getElementById('modePlusMinusBtn').addEventListener('click', function () {
+    mode = 'plusminus';
+    startQuiz();
+  });
+
+  document.getElementById('backBtn').addEventListener('click', function () {
+    show(modeEl);
+  });
+
+  startBtn.addEventListener('click', startQuiz);
 
   function renderQuestion() {
     var q = questions[current];
@@ -376,7 +469,7 @@
 
   document.getElementById('againBtn').addEventListener('click', function () {
     stopConfetti();
-    show(setupEl);
+    show(modeEl);
   });
 
   // --- Confetti ---
