@@ -2,13 +2,23 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wat wil je oefenen?</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rekenen</title>
+<meta name="description" content="Oefen maal- en deeltafels en plus- en minsommen tot 100.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rekenen">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
 <style>
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
+    overscroll-behavior: none;   /* geen rubber-band in de geinstalleerde app */
     background: #ffffff;
     color: #1a1a1a;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -16,12 +26,21 @@
   body {
     display: flex;
     min-height: 100vh;
+    min-height: 100dvh;          /* 100vh is op mobiel de grote viewport */
   }
   #app {
     margin: auto;              /* centers both axes, stays scrollable when tall */
     width: 100%;
     max-width: 640px;
-    padding: 32px 24px;
+    padding: max(32px, env(safe-area-inset-top))
+             max(24px, env(safe-area-inset-right))
+             max(32px, env(safe-area-inset-bottom))
+             max(24px, env(safe-area-inset-left));
+  }
+  button {
+    font: inherit;
+    touch-action: manipulation;          /* geen dubbeltik-zoom */
+    -webkit-tap-highlight-color: transparent;
   }
   h1 {
     font-weight: 600;
@@ -50,7 +69,7 @@
     cursor: pointer;
     transition: all .12s ease;
   }
-  .mode-btn:hover { border-color: #2563eb; }
+  .mode-btn:active { border-color: #2563eb; }
   .mode-btn .mode-desc {
     display: block;
     margin-top: 6px;
@@ -67,7 +86,7 @@
     color: #888;
     cursor: pointer;
   }
-  .back-btn:hover { color: #1a1a1a; }
+  .back-btn:active { color: #1a1a1a; }
 
   /* Setup screen */
   .section-label {
@@ -93,7 +112,7 @@
     transition: all .12s ease;
     user-select: none;
   }
-  .num-btn:hover { border-color: #bbb; }
+  .num-btn:active { border-color: #bbb; }
   .num-btn.selected {
     border-color: #2563eb;
     background: #2563eb;
@@ -111,7 +130,7 @@
     cursor: pointer;
     transition: opacity .12s ease;
   }
-  .start-btn:hover { opacity: .85; }
+  .start-btn:active { opacity: .85; }
   .start-btn:disabled { opacity: .3; cursor: not-allowed; }
 
   /* Quiz screen */
@@ -164,7 +183,7 @@
     cursor: pointer;
     margin-top: 24px;
   }
-  .next-btn:hover { opacity: .85; }
+  .next-btn:active { opacity: .85; }
 
   /* Result screen */
   .score {
@@ -190,6 +209,16 @@
   .review .mark { font-size: 20px; }
   .review .given { color: #888; font-size: 15px; }
   .hidden { display: none; }
+
+  /* Hover blijft op touch plakken na een tik, dus alleen voor echte muizen. */
+  @media (hover: hover) and (pointer: fine) {
+    .mode-btn:hover { border-color: #2563eb; }
+    .back-btn:hover { color: #1a1a1a; }
+    .num-btn:hover { border-color: #bbb; }
+    .start-btn:hover { opacity: .85; }
+    .next-btn:hover { opacity: .85; }
+    .start-btn:disabled:hover { opacity: .3; }
+  }
 
   #confetti {
     position: fixed;
@@ -261,6 +290,8 @@
   var numbersEl = document.getElementById('numbers');
   var startBtn = document.getElementById('startBtn');
 
+  var numBtns = {};
+
   for (var i = 1; i <= 10; i++) {
     (function (n) {
       var b = document.createElement('button');
@@ -272,10 +303,43 @@
         updateStart();
       });
       numbersEl.appendChild(b);
+      numBtns[n] = b;
     })(i);
   }
 
+  // De gekozen tafels blijven bewaard, zodat een kind ze niet elke keer
+  // opnieuw moet aanduiden. localStorage aanraken kan op zich al gooien
+  // (afgeschermde webviews), vandaar de try rond de toegang zelf.
+  var STORE_KEY = 'rekenen.tables.v1';
+
+  function saveSelection() {
+    try {
+      window.localStorage.setItem(STORE_KEY, JSON.stringify(Array.from(selected)));
+    } catch (e) { /* bewaren lukt niet; het spel werkt gewoon verder */ }
+  }
+
+  function restoreSelection() {
+    var stored;
+    try {
+      stored = JSON.parse(window.localStorage.getItem(STORE_KEY));
+    } catch (e) { return; }
+    if (!Array.isArray(stored)) return;
+    stored.forEach(function (n) {
+      // Alleen echte tafels 1-10; een rommelige waarde mag nooit in
+      // buildTableQuestions() belanden.
+      if (!Number.isInteger(n) || n < 1 || n > 10) return;
+      selected.add(n);
+      numBtns[n].classList.add('selected');
+    });
+  }
+
+  restoreSelection();
+  // Nodig na herstel: anders blijft Start uitgeschakeld terwijl er tafels
+  // aangeduid staan. (updateStart is hoisted, dus dit mag hier al.)
+  updateStart();
+
   function updateStart() {
+    saveSelection();
     if (selected.size > 0) {
       startBtn.disabled = false;
       startBtn.textContent = 'Start';
@@ -475,17 +539,35 @@
   var ctx = canvas.getContext('2d');
   var confettiPieces = [];
   var confettiRAF = null;
+  var W = 0, H = 0;             // afmetingen in CSS-pixels
   var COLORS = ['#2563eb', '#16a34a', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+
+  // Schaalt de bitmap mee met devicePixelRatio (anders wazig op retina) en
+  // met de schermgrootte (anders klopt het niet meer na draaien van de tablet).
+  function sizeCanvas() {
+    var dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function onConfettiResize() {
+    if (confettiRAF === null) return;
+    sizeCanvas();
+  }
+  window.addEventListener('resize', onConfettiResize);
+  window.addEventListener('orientationchange', onConfettiResize);
 
   function launchConfetti() {
     canvas.classList.remove('hidden');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    sizeCanvas();
     confettiPieces = [];
     for (var i = 0; i < 160; i++) {
       confettiPieces.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * -canvas.height,
+        x: Math.random() * W,
+        y: Math.random() * -H,
         w: 6 + Math.random() * 8,
         h: 8 + Math.random() * 8,
         color: COLORS[Math.floor(Math.random() * COLORS.length)],
@@ -501,15 +583,15 @@
     function frame(ts) {
       if (start === null) start = ts;
       var elapsed = ts - start;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, W, H);
       for (var i = 0; i < confettiPieces.length; i++) {
         var p = confettiPieces[i];
         p.y += p.vy;
         p.x += p.vx;
         p.angle += p.spin;
-        if (p.y > canvas.height + 20) {
+        if (p.y > H + 20) {
           p.y = -20;
-          p.x = Math.random() * canvas.width;
+          p.x = Math.random() * W;
         }
         ctx.save();
         ctx.translate(p.x, p.y);
@@ -530,8 +612,19 @@
 
   function stopConfetti() {
     if (confettiRAF) { cancelAnimationFrame(confettiRAF); confettiRAF = null; }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, W, H);
     canvas.classList.add('hidden');
+  }
+
+  // --- Service worker ---
+  // Relatief pad: de site staat op /math-game/, niet op de root.
+  // updateViaCache 'none' zorgt dat een nieuwe sw.js niet achter de
+  // HTTP-cache van GitHub Pages blijft hangen.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+        ['catch'](function () { /* offline werkt dan niet; spel wel */ });
+    });
   }
 
 })();
