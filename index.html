@@ -184,6 +184,7 @@
     margin-top: 24px;
   }
   .next-btn:active { opacity: .85; }
+  .next-btn:disabled { opacity: .3; cursor: not-allowed; }
 
   /* Result screen */
   .score {
@@ -217,6 +218,7 @@
     .num-btn:hover { border-color: #bbb; }
     .start-btn:hover { opacity: .85; }
     .next-btn:hover { opacity: .85; }
+    .next-btn:disabled:hover { opacity: .3; }
     .start-btn:disabled:hover { opacity: .3; }
   }
 
@@ -261,6 +263,7 @@
     <div class="question" id="question"></div>
     <input class="answer-input" id="answerInput" type="number" inputmode="numeric" placeholder="?" autocomplete="off">
     <p class="feedback" id="feedback"></p>
+    <button class="next-btn" id="checkBtn" disabled>Controleer</button>
     <button class="next-btn hidden" id="nextBtn">Volgende</button>
   </div>
 
@@ -401,6 +404,7 @@
   var questionEl = document.getElementById('question');
   var answerInput = document.getElementById('answerInput');
   var feedbackEl = document.getElementById('feedback');
+  var checkBtn = document.getElementById('checkBtn');
   var nextBtn = document.getElementById('nextBtn');
 
   function show(el) {
@@ -446,6 +450,8 @@
     feedbackEl.textContent = '';
     feedbackEl.className = 'feedback';
     nextBtn.classList.add('hidden');
+    checkBtn.classList.remove('hidden');
+    checkBtn.disabled = true;
     answerInput.focus();
   }
 
@@ -470,6 +476,7 @@
       feedbackEl.className = 'feedback wrong';
     }
 
+    checkBtn.classList.add('hidden');
     nextBtn.textContent = (current + 1 < NUM_QUESTIONS) ? 'Volgende' : 'Bekijk resultaat';
     nextBtn.classList.remove('hidden');
     nextBtn.focus();
@@ -495,6 +502,11 @@
   });
   // Naar de volgende vraag: via de knop (klik, of Enter/spatie als de knop
   // focus heeft na het antwoorden).
+  checkBtn.addEventListener('click', submitAnswer);
+  // Leeg antwoord kan niet verstuurd worden; de knop blijft dan uit.
+  answerInput.addEventListener('input', function () {
+    checkBtn.disabled = answerInput.value.trim() === '';
+  });
   nextBtn.addEventListener('click', nextQuestion);
 
   // --- Results ---
