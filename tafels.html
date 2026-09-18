@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tafels oefenen</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  body {
+    display: flex;
+    min-height: 100vh;
+  }
+  #app {
+    margin: auto;              /* centers both axes, stays scrollable when tall */
+    width: 100%;
+    max-width: 640px;
+    padding: 32px 24px;
+  }
+  h1 {
+    font-weight: 600;
+    font-size: 26px;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: #888;
+    font-size: 15px;
+    margin: 0 0 32px;
+  }
+
+  /* Setup screen */
+  .section-label {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 12px;
+  }
+  .numbers {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .num-btn {
+    padding: 16px 0;
+    font-size: 20px;
+    font-weight: 600;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fff;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all .12s ease;
+    user-select: none;
+  }
+  .num-btn:hover { border-color: #bbb; }
+  .num-btn.selected {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+  }
+  .start-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    background: #1a1a1a;
+    color: #fff;
+    cursor: pointer;
+    transition: opacity .12s ease;
+  }
+  .start-btn:hover { opacity: .85; }
+  .start-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+  /* Quiz screen */
+  .progress {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  .question {
+    font-size: 44px;
+    font-weight: 600;
+    margin: 24px 0 24px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .answer-input {
+    width: 100%;
+    padding: 18px;
+    font-size: 28px;
+    text-align: center;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .answer-input::-webkit-outer-spin-button,
+  .answer-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .answer-input:focus { border-color: #2563eb; }
+  .answer-input.correct { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
+  .answer-input.wrong { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
+  .feedback {
+    text-align: center;
+    font-size: 16px;
+    margin-top: 16px;
+    min-height: 24px;
+    font-weight: 500;
+  }
+  .feedback.correct { color: #16a34a; }
+  .feedback.wrong { color: #dc2626; }
+  .next-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    background: #1a1a1a;
+    color: #fff;
+    cursor: pointer;
+    margin-top: 24px;
+  }
+  .next-btn:hover { opacity: .85; }
+
+  /* Result screen */
+  .score {
+    font-size: 64px;
+    font-weight: 700;
+    text-align: center;
+    margin: 8px 0 8px;
+  }
+  .score-label {
+    text-align: center;
+    color: #888;
+    font-size: 16px;
+    margin-bottom: 32px;
+  }
+  .review {
+    border-top: 1px solid #eee;
+    padding: 14px 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 18px;
+  }
+  .review .mark { font-size: 20px; }
+  .review .given { color: #888; font-size: 15px; }
+  .hidden { display: none; }
+
+  #confetti {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+  }
+</style>
+</head>
+<body>
+<canvas id="confetti" class="hidden"></canvas>
+<div id="app">
+
+  <!-- SETUP -->
+  <div id="setup">
+    <h1>Tafels oefenen</h1>
+    <p class="subtitle">Kies welke tafels je wil oefenen en beantwoord 10 vragen.</p>
+    <p class="section-label">Basisgetallen</p>
+    <div class="numbers" id="numbers"></div>
+    <button class="start-btn" id="startBtn" disabled>Start (kies minstens één)</button>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz" class="hidden">
+    <p class="progress" id="progress"></p>
+    <div class="question" id="question"></div>
+    <input class="answer-input" id="answerInput" type="number" inputmode="numeric" placeholder="?" autocomplete="off">
+    <p class="feedback" id="feedback"></p>
+    <button class="next-btn hidden" id="nextBtn">Volgende</button>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result" class="hidden">
+    <div class="score" id="score"></div>
+    <p class="score-label">van de 10 juist</p>
+    <p class="score-label" id="timeLabel" style="margin-top:-24px;"></p>
+    <div id="reviewList"></div>
+    <button class="start-btn" id="againBtn" style="margin-top:32px;">Opnieuw spelen</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var NUM_QUESTIONS = 10;
+  var selected = new Set();
+  var questions = [];
+  var current = 0;
+  var results = [];
+  var startTime = 0;
+
+  // --- Setup screen ---
+  var numbersEl = document.getElementById('numbers');
+  var startBtn = document.getElementById('startBtn');
+
+  for (var i = 1; i <= 10; i++) {
+    (function (n) {
+      var b = document.createElement('button');
+      b.className = 'num-btn';
+      b.textContent = n;
+      b.addEventListener('click', function () {
+        if (selected.has(n)) { selected.delete(n); b.classList.remove('selected'); }
+        else { selected.add(n); b.classList.add('selected'); }
+        updateStart();
+      });
+      numbersEl.appendChild(b);
+    })(i);
+  }
+
+  function updateStart() {
+    if (selected.size > 0) {
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start';
+    } else {
+      startBtn.disabled = true;
+      startBtn.textContent = 'Start (kies minstens één)';
+    }
+  }
+
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function buildQuestions() {
+    var bases = Array.from(selected);
+    var qs = [];
+    for (var q = 0; q < NUM_QUESTIONS; q++) {
+      var base = bases[randInt(0, bases.length - 1)];
+      var factor = randInt(1, 10);
+      var isDivision = Math.random() < 0.5;
+      if (isDivision) {
+        var product = base * factor;
+        qs.push({ text: product + ' : ' + base + ' = ?', answer: factor });
+      } else {
+        qs.push({ text: factor + ' × ' + base + ' = ?', answer: base * factor });
+      }
+    }
+    return qs;
+  }
+
+  // --- Screens ---
+  var setupEl = document.getElementById('setup');
+  var quizEl = document.getElementById('quiz');
+  var resultEl = document.getElementById('result');
+
+  var progressEl = document.getElementById('progress');
+  var questionEl = document.getElementById('question');
+  var answerInput = document.getElementById('answerInput');
+  var feedbackEl = document.getElementById('feedback');
+  var nextBtn = document.getElementById('nextBtn');
+
+  function show(el) {
+    setupEl.classList.add('hidden');
+    quizEl.classList.add('hidden');
+    resultEl.classList.add('hidden');
+    el.classList.remove('hidden');
+  }
+
+  startBtn.addEventListener('click', function () {
+    questions = buildQuestions();
+    current = 0;
+    results = [];
+    startTime = Date.now();
+    show(quizEl);
+    renderQuestion();
+  });
+
+  function renderQuestion() {
+    var q = questions[current];
+    progressEl.textContent = 'Vraag ' + (current + 1) + ' van ' + NUM_QUESTIONS;
+    questionEl.textContent = q.text;
+    answerInput.value = '';
+    answerInput.className = 'answer-input';
+    answerInput.disabled = false;
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'feedback';
+    nextBtn.classList.add('hidden');
+    answerInput.focus();
+  }
+
+  function submitAnswer() {
+    if (answerInput.disabled) return;
+    var raw = answerInput.value.trim();
+    if (raw === '') return;
+    var given = parseInt(raw, 10);
+    var q = questions[current];
+    var correct = given === q.answer;
+
+    results.push({ text: q.text, answer: q.answer, given: given, correct: correct });
+    answerInput.disabled = true;
+
+    if (correct) {
+      answerInput.classList.add('correct');
+      feedbackEl.textContent = 'Juist!';
+      feedbackEl.className = 'feedback correct';
+    } else {
+      answerInput.classList.add('wrong');
+      feedbackEl.textContent = 'Het juiste antwoord is ' + q.answer;
+      feedbackEl.className = 'feedback wrong';
+    }
+
+    nextBtn.textContent = (current + 1 < NUM_QUESTIONS) ? 'Volgende' : 'Bekijk resultaat';
+    nextBtn.classList.remove('hidden');
+    nextBtn.focus();
+  }
+
+  function nextQuestion() {
+    current++;
+    if (current < NUM_QUESTIONS) {
+      renderQuestion();
+    } else {
+      showResults();
+    }
+  }
+
+  // Antwoord verschijnt pas NA Enter (niet ervoor). preventDefault +
+  // stopPropagation zodat dezelfde Enter-toets niet meteen doorspringt.
+  answerInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      submitAnswer();
+    }
+  });
+  // Naar de volgende vraag: via de knop (klik, of Enter/spatie als de knop
+  // focus heeft na het antwoorden).
+  nextBtn.addEventListener('click', nextQuestion);
+
+  // --- Results ---
+  function formatDuration(ms) {
+    var totalSec = Math.round(ms / 1000);
+    var min = Math.floor(totalSec / 60);
+    var sec = totalSec % 60;
+    if (min > 0) {
+      return min + ' min ' + sec + ' sec';
+    }
+    return sec + ' seconden';
+  }
+
+  function showResults() {
+    var score = results.filter(function (r) { return r.correct; }).length;
+    document.getElementById('score').textContent = score;
+    document.getElementById('timeLabel').textContent =
+      'Voltooid in ' + formatDuration(Date.now() - startTime);
+    var list = document.getElementById('reviewList');
+    list.innerHTML = '';
+    results.forEach(function (r) {
+      var row = document.createElement('div');
+      row.className = 'review';
+      var q = r.text.replace(' = ?', ' = ' + r.answer);
+      var right = r.correct
+        ? '<span class="mark">✅</span>'
+        : '<span class="given">jij: ' + r.given + '</span> <span class="mark">❌</span>';
+      row.innerHTML = '<span>' + q + '</span><span>' + right + '</span>';
+      list.appendChild(row);
+    });
+    show(resultEl);
+    if (score >= 8) launchConfetti();
+  }
+
+  document.getElementById('againBtn').addEventListener('click', function () {
+    stopConfetti();
+    show(setupEl);
+  });
+
+  // --- Confetti ---
+  var canvas = document.getElementById('confetti');
+  var ctx = canvas.getContext('2d');
+  var confettiPieces = [];
+  var confettiRAF = null;
+  var COLORS = ['#2563eb', '#16a34a', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+
+  function launchConfetti() {
+    canvas.classList.remove('hidden');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    confettiPieces = [];
+    for (var i = 0; i < 160; i++) {
+      confettiPieces.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height,
+        w: 6 + Math.random() * 8,
+        h: 8 + Math.random() * 8,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        vy: 2 + Math.random() * 4,
+        vx: -1.5 + Math.random() * 3,
+        angle: Math.random() * Math.PI * 2,
+        spin: -0.15 + Math.random() * 0.3
+      });
+    }
+    var start = null;
+    var DURATION = 4500;
+
+    function frame(ts) {
+      if (start === null) start = ts;
+      var elapsed = ts - start;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (var i = 0; i < confettiPieces.length; i++) {
+        var p = confettiPieces[i];
+        p.y += p.vy;
+        p.x += p.vx;
+        p.angle += p.spin;
+        if (p.y > canvas.height + 20) {
+          p.y = -20;
+          p.x = Math.random() * canvas.width;
+        }
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.globalAlpha = elapsed > DURATION - 1000 ? Math.max(0, (DURATION - elapsed) / 1000) : 1;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+      if (elapsed < DURATION) {
+        confettiRAF = requestAnimationFrame(frame);
+      } else {
+        stopConfetti();
+      }
+    }
+    confettiRAF = requestAnimationFrame(frame);
+  }
+
+  function stopConfetti() {
+    if (confettiRAF) { cancelAnimationFrame(confettiRAF); confettiRAF = null; }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.classList.add('hidden');
+  }
+
+})();
+</script>
+</body>
+</html>
