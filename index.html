@@ -32,7 +32,10 @@
   #app {
     /* Bovenaan uitlijnen, niet verticaal centreren: een schermtoetsenbord
        maakt de viewport kleiner, en gecentreerd springt de hele inhoud dan
-       op en neer telkens als dat toetsenbord verschijnt of verdwijnt. */
+       op en neer telkens als dat toetsenbord verschijnt of verdwijnt.
+       Overal hetzelfde, niet enkel op touch: een iPad met toetsenbord of
+       muis meldt zich als een toestel met een fijne aanwijzer, en zou met
+       een uitzondering voor muizen alsnog springen. */
     margin: 0 auto;
     width: 100%;
     max-width: 640px;
@@ -55,6 +58,12 @@
     color: #888;
     font-size: 15px;
     margin: 0 0 32px;
+  }
+  .version {
+    color: #ccc;
+    font-size: 12px;
+    text-align: right;
+    margin: 20px 0 0;
   }
 
   /* Mode screen */
@@ -224,10 +233,6 @@
     .next-btn:hover { opacity: .85; }
     .next-btn:disabled:hover { opacity: .3; }
     .start-btn:disabled:hover { opacity: .3; }
-    /* Een toestel met muis heeft geen schermtoetsenbord dat de viewport
-       verkleint, dus daar mag de inhoud wel gecentreerd blijven staan. */
-    body { align-items: center; }
-    #app { margin: auto; }
   }
 
   #confetti {
@@ -253,6 +258,7 @@
     <button class="mode-btn" id="modePlusMinusBtn">
       Plus en min tot 100
     </button>
+    <p class="version" id="version"></p>
   </div>
 
   <!-- SETUP (tafels) -->
@@ -288,6 +294,8 @@
 
 <script>
 (function () {
+  // Bump dit samen met CACHE in sw.js bij elke deploy.
+  var APP_VERSION = 'v4';
   var NUM_QUESTIONS = 10;
   var MAX_VALUE = 100;          // alle getallen én antwoorden blijven tussen 0 en 100
   var selected = new Set();
@@ -636,6 +644,8 @@
     canvas.classList.add('hidden');
   }
 
+  document.getElementById('version').textContent = APP_VERSION;
+
   // --- Service worker ---
   // Relatief pad: de site staat op /math-game/, niet op de root.
   // updateViaCache 'none' zorgt dat een nieuwe sw.js niet achter de
@@ -644,6 +654,13 @@
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
         ['catch'](function () { /* offline werkt dan niet; spel wel */ });
+    });
+
+    var reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
     });
   }
 

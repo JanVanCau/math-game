@@ -1,6 +1,6 @@
 /* Service worker voor "Rekenen oefenen".
    Bump CACHE bij elke deploy, anders blijft de oude versie hangen. */
-var CACHE = 'rekenen-v3';
+var CACHE = 'rekenen-v4';
 
 // Alles relatief: de site staat op /math-game/, niet op de root.
 // './' en './index.html' zijn aparte cache-keys, dus allebei nodig.
@@ -17,7 +17,11 @@ var PRECACHE = [
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE)
-      .then(function (c) { return c.addAll(PRECACHE); })
+      .then(function (c) {
+        return c.addAll(PRECACHE.map(function (u) {
+          return new Request(u, { cache: 'reload' });
+        }));
+      })
       .then(function () { return self.skipWaiting(); })
   );
 });
@@ -44,7 +48,7 @@ self.addEventListener('fetch', function (e) {
   // voor altijd op een oude versie hangen.
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: 'reload' })
         .then(function (res) {
           var copy = res.clone();
           caches.open(CACHE).then(function (c) { c.put('./', copy); });
