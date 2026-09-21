@@ -251,11 +251,16 @@
      screen while a long result list scrolls past them. pointer-events: none
      means a tap always goes through to the button or input underneath, and
      #app sits on a higher layer so text is never drawn over.
-     They hug the corners: the top of the screen holds the title and the
-     questions, the bottom is empty on nearly every screen. */
+     Anchored to the top, and the height is pinned in pixels by
+     sizeBackdrop(): a viewport that shrinks under an on-screen keyboard
+     would otherwise drag every drawing up and down with it. The 100dvh here
+     is only the starting point until that script runs. */
   #backdrop {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100dvh;
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
@@ -274,27 +279,34 @@
   }
   @keyframes doodle-in { to { opacity: var(--doodle-opacity); } }
 
-  /* Per drawing, because a dense felt-tip sun carries much further at the
-     same opacity than a pale crayon face. */
+  /* Spread over the height in a zig-zag - top right, left, right, bottom
+     left - so the middle of the screen is not left bare. The two in the
+     middle hang off the side edges, where they stay clear of the question
+     and the answer box in the centre column.
+     Opacity per drawing, because a dense felt-tip sun carries much further
+     at the same opacity than a pale crayon face. */
   .doodle-sun    { --doodle-opacity: .16; width: 170px; top: -56px; right: -54px; transform: rotate(8deg); }
+  .doodle-hearts { --doodle-opacity: .22; width: 145px; top: 40%; left: -10px; transform: translateY(-50%) rotate(-8deg); }
+  .doodle-bunny  { --doodle-opacity: .24; width: 100px; top: 64%; right: -18px; transform: translateY(-50%) rotate(8deg); }
   .doodle-face   { --doodle-opacity: .30; width: 150px; bottom: -12px; left: -22px; transform: rotate(-6deg); }
-  .doodle-bunny  { --doodle-opacity: .26; width: 104px; bottom: 18px; right: -14px; transform: rotate(7deg); }
-  .doodle-hearts { --doodle-opacity: .24; width: 140px; bottom: 20px; left: 50%; transform: translateX(-50%) rotate(-3deg); }
 
   /* Plenty of room beside the 640px column: bigger, and fully in view. */
   @media (min-width: 900px) {
     .doodle-sun    { width: 250px; top: -50px; right: 24px; }
+    .doodle-hearts { width: 200px; top: 38%; left: 30px; }
+    .doodle-bunny  { width: 140px; top: 66%; right: 46px; }
     .doodle-face   { width: 240px; bottom: 16px; left: 28px; }
-    .doodle-bunny  { width: 150px; bottom: 40px; right: 40px; }
-    .doodle-hearts { width: 200px; bottom: 28px; }
   }
 
-  /* A phone on its side is almost all content; keep the bottom edge free. */
-  @media (max-height: 520px) {
-    .doodle-hearts, .doodle-bunny { display: none; }
-    .doodle-face { width: 140px; bottom: -40px; }
-    .doodle-sun  { width: 140px; }
-  }
+  /* A phone on its side is almost all content: there is no free middle to
+     fill, so only the two corner drawings stay.
+     On a class from sizeBackdrop() rather than a max-height media query,
+     because a keyboard shrinks the viewport too and would make these two
+     drawings blink away and back with every answer. */
+  body.compact .doodle-hearts,
+  body.compact .doodle-bunny { display: none; }
+  body.compact .doodle-face  { width: 140px; bottom: -40px; }
+  body.compact .doodle-sun   { width: 140px; }
 
   @media (prefers-reduced-motion: reduce) {
     .doodle { animation: none; opacity: var(--doodle-opacity); }
@@ -657,6 +669,37 @@
   document.getElementById('againBtn').addEventListener('click', function () {
     stopConfetti();
     show(modeEl);
+  });
+
+  // --- Background drawings ---
+  // The drawings hang in a layer that is as tall as the screen. Left to the
+  // viewport, that height shrinks the moment an on-screen keyboard opens,
+  // and everything in the lower half slides up and then back down again -
+  // exactly the jumping around that #app already avoids. So the height is
+  // fixed in pixels once, and only a real change of screen updates it.
+  // The width is what tells the two apart: a keyboard never changes it,
+  // a rotation or a resized window always does.
+  var backdrop = document.getElementById('backdrop');
+  var backdropWidth = window.innerWidth;
+
+  function sizeBackdrop() {
+    backdropWidth = window.innerWidth;
+    backdrop.style.height = window.innerHeight + 'px';
+    // A short screen (a phone on its side) has no free middle to fill.
+    document.body.classList.toggle('compact', window.innerHeight <= 520);
+  }
+
+  sizeBackdrop();
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth === backdropWidth) return;   // a keyboard, not a new screen
+    sizeBackdrop();
+  });
+
+  // After a rotation the new dimensions are not always in yet when the event
+  // arrives, so measure once more a moment later.
+  window.addEventListener('orientationchange', function () {
+    setTimeout(sizeBackdrop, 300);
   });
 
   // --- Confetti ---
