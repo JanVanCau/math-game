@@ -1,9 +1,9 @@
-/* Service worker voor "Rekenen oefenen".
-   Bump CACHE bij elke deploy, anders blijft de oude versie hangen. */
-var CACHE = 'rekenen-v4';
+/* Service worker for "Rekenen oefenen".
+   Bump CACHE on every deploy, otherwise the old version sticks around. */
+var CACHE = 'rekenen-v6';
 
-// Alles relatief: de site staat op /math-game/, niet op de root.
-// './' en './index.html' zijn aparte cache-keys, dus allebei nodig.
+// Everything relative: the site lives at /math-game/, not at the root.
+// './' and './index.html' are separate cache keys, so both are needed.
 var PRECACHE = [
   './',
   './index.html',
@@ -11,7 +11,11 @@ var PRECACHE = [
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/icon-512-maskable.png'
+  './icons/icon-512-maskable.png',
+  './drawings/tekening_1.png',
+  './drawings/tekening_2.png',
+  './drawings/tekening_3.png',
+  './drawings/tekening_4.png'
 ];
 
 self.addEventListener('install', function (e) {
@@ -43,9 +47,9 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
 
-  // Network-first voor de pagina zelf: online krijg je altijd de nieuwste
-  // versie, offline val je terug op de cache. Zonder dit blijft een kind
-  // voor altijd op een oude versie hangen.
+  // Network-first for the page itself: online you always get the newest
+  // version, offline you fall back on the cache. Without this a child stays
+  // stuck on an old version forever.
   if (req.mode === 'navigate') {
     e.respondWith(
       fetch(req.url, { cache: 'reload' })
@@ -63,7 +67,7 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // Cache-first voor de rest (icons, manifest).
+  // Cache-first for everything else (icons, manifest).
   e.respondWith(
     caches.match(req).then(function (hit) {
       return hit || fetch(req).then(function (res) {

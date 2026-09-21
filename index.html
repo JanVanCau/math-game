@@ -18,7 +18,7 @@
   html, body {
     margin: 0;
     padding: 0;
-    overscroll-behavior: none;   /* geen rubber-band in de geinstalleerde app */
+    overscroll-behavior: none;   /* no rubber-band scrolling in the installed app */
     background: #ffffff;
     color: #1a1a1a;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -27,15 +27,18 @@
     display: flex;
     align-items: flex-start;
     min-height: 100vh;
-    min-height: 100dvh;          /* 100vh is op mobiel de grote viewport */
+    min-height: 100dvh;          /* on mobile 100vh is the large viewport */
   }
   #app {
-    /* Bovenaan uitlijnen, niet verticaal centreren: een schermtoetsenbord
-       maakt de viewport kleiner, en gecentreerd springt de hele inhoud dan
-       op en neer telkens als dat toetsenbord verschijnt of verdwijnt.
-       Overal hetzelfde, niet enkel op touch: een iPad met toetsenbord of
-       muis meldt zich als een toestel met een fijne aanwijzer, en zou met
-       een uitzondering voor muizen alsnog springen. */
+    /* Above #backdrop, so the drawings never land on top of a question. */
+    position: relative;
+    z-index: 1;
+    /* Align to the top instead of centring vertically: an on-screen
+       keyboard shrinks the viewport, and centred content then jumps up and
+       down every time that keyboard appears or disappears.
+       The same everywhere, not just on touch: an iPad with a keyboard or
+       mouse reports itself as a device with a fine pointer, so an exception
+       for mice would still leave it jumping. */
     margin: 0 auto;
     width: 100%;
     max-width: 640px;
@@ -46,7 +49,7 @@
   }
   button {
     font: inherit;
-    touch-action: manipulation;          /* geen dubbeltik-zoom */
+    touch-action: manipulation;          /* no double-tap zoom */
     -webkit-tap-highlight-color: transparent;
   }
   h1 {
@@ -224,7 +227,7 @@
   .review .given { color: #888; font-size: 15px; }
   .hidden { display: none; }
 
-  /* Hover blijft op touch plakken na een tik, dus alleen voor echte muizen. */
+  /* Hover sticks after a tap on touch, so only for real mice. */
   @media (hover: hover) and (pointer: fine) {
     .mode-btn:hover { border-color: #2563eb; }
     .back-btn:hover { color: #1a1a1a; }
@@ -242,10 +245,73 @@
     pointer-events: none;
     z-index: 9999;
   }
+
+  /* --- Drawings in the background ---
+     Fixed and clipped, so the drawings stay put along the edges of the
+     screen while a long result list scrolls past them. pointer-events: none
+     means a tap always goes through to the button or input underneath, and
+     #app sits on a higher layer so text is never drawn over.
+     They hug the corners: the top of the screen holds the title and the
+     questions, the bottom is empty on nearly every screen. */
+  #backdrop {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity .3s ease;
+  }
+  /* The list of answers is the one screen that can fill the whole height, so
+     there the drawings step back while the answers are being read back. */
+  body.reading #backdrop { opacity: .45; }
+  .doodle {
+    position: absolute;
+    height: auto;
+    /* Only fade in once the drawing is there, so it does not pop into view
+       halfway through the first question. */
+    opacity: 0;
+    animation: doodle-in .8s ease forwards;
+  }
+  @keyframes doodle-in { to { opacity: var(--doodle-opacity); } }
+
+  /* Per drawing, because a dense felt-tip sun carries much further at the
+     same opacity than a pale crayon face. */
+  .doodle-sun    { --doodle-opacity: .16; width: 170px; top: -56px; right: -54px; transform: rotate(8deg); }
+  .doodle-face   { --doodle-opacity: .30; width: 150px; bottom: -12px; left: -22px; transform: rotate(-6deg); }
+  .doodle-bunny  { --doodle-opacity: .26; width: 104px; bottom: 18px; right: -14px; transform: rotate(7deg); }
+  .doodle-hearts { --doodle-opacity: .24; width: 140px; bottom: 20px; left: 50%; transform: translateX(-50%) rotate(-3deg); }
+
+  /* Plenty of room beside the 640px column: bigger, and fully in view. */
+  @media (min-width: 900px) {
+    .doodle-sun    { width: 250px; top: -50px; right: 24px; }
+    .doodle-face   { width: 240px; bottom: 16px; left: 28px; }
+    .doodle-bunny  { width: 150px; bottom: 40px; right: 40px; }
+    .doodle-hearts { width: 200px; bottom: 28px; }
+  }
+
+  /* A phone on its side is almost all content; keep the bottom edge free. */
+  @media (max-height: 520px) {
+    .doodle-hearts, .doodle-bunny { display: none; }
+    .doodle-face { width: 140px; bottom: -40px; }
+    .doodle-sun  { width: 140px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .doodle { animation: none; opacity: var(--doodle-opacity); }
+  }
 </style>
 </head>
 <body>
 <canvas id="confetti" class="hidden"></canvas>
+
+<!-- Decoration only, so hidden from screen readers. -->
+<div id="backdrop" aria-hidden="true">
+  <img class="doodle doodle-sun" src="drawings/tekening_4.png" alt="" width="309" height="340" decoding="async">
+  <img class="doodle doodle-face" src="drawings/tekening_1.png" alt="" width="255" height="279" decoding="async">
+  <img class="doodle doodle-bunny" src="drawings/tekening_3.png" alt="" width="147" height="219" decoding="async">
+  <img class="doodle doodle-hearts" src="drawings/tekening_2.png" alt="" width="284" height="99" decoding="async">
+</div>
+
 <div id="app">
 
   <!-- MODE -->
@@ -261,7 +327,7 @@
     <p class="version" id="version"></p>
   </div>
 
-  <!-- SETUP (tafels) -->
+  <!-- SETUP (times tables) -->
   <div id="setup" class="hidden">
     <button class="back-btn" id="backBtn">← Ander spel</button>
     <h1>Tafels oefenen</h1>
@@ -294,12 +360,12 @@
 
 <script>
 (function () {
-  // Bump dit samen met CACHE in sw.js bij elke deploy.
-  var APP_VERSION = 'v4';
+  // Bump this together with CACHE in sw.js on every deploy.
+  var APP_VERSION = 'v6';
   var NUM_QUESTIONS = 10;
-  var MAX_VALUE = 100;          // alle getallen én antwoorden blijven tussen 0 en 100
+  var MAX_VALUE = 100;          // every number and answer stays between 0 and 100
   var selected = new Set();
-  var mode = 'tables';          // 'tables' of 'plusminus'
+  var mode = 'tables';          // 'tables' or 'plusminus'
   var questions = [];
   var current = 0;
   var results = [];
@@ -326,15 +392,15 @@
     })(i);
   }
 
-  // De gekozen tafels blijven bewaard, zodat een kind ze niet elke keer
-  // opnieuw moet aanduiden. localStorage aanraken kan op zich al gooien
-  // (afgeschermde webviews), vandaar de try rond de toegang zelf.
+  // The chosen tables are remembered, so a child does not have to pick them
+  // again every time. Merely touching localStorage can throw (locked-down
+  // webviews), hence the try around the access itself.
   var STORE_KEY = 'rekenen.tables.v1';
 
   function saveSelection() {
     try {
       window.localStorage.setItem(STORE_KEY, JSON.stringify(Array.from(selected)));
-    } catch (e) { /* bewaren lukt niet; het spel werkt gewoon verder */ }
+    } catch (e) { /* saving failed; the game simply carries on */ }
   }
 
   function restoreSelection() {
@@ -344,8 +410,8 @@
     } catch (e) { return; }
     if (!Array.isArray(stored)) return;
     stored.forEach(function (n) {
-      // Alleen echte tafels 1-10; een rommelige waarde mag nooit in
-      // buildTableQuestions() belanden.
+      // Only real tables 1-10; a junk value must never reach
+      // buildTableQuestions().
       if (!Number.isInteger(n) || n < 1 || n > 10) return;
       selected.add(n);
       numBtns[n].classList.add('selected');
@@ -353,8 +419,8 @@
   }
 
   restoreSelection();
-  // Nodig na herstel: anders blijft Start uitgeschakeld terwijl er tafels
-  // aangeduid staan. (updateStart is hoisted, dus dit mag hier al.)
+  // Needed after restoring: otherwise Start stays disabled while tables are
+  // selected. (updateStart is hoisted, so calling it here is fine.)
   updateStart();
 
   function updateStart() {
@@ -370,40 +436,70 @@
 
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-  function buildTableQuestions() {
-    var bases = Array.from(selected);
-    var qs = [];
-    for (var q = 0; q < NUM_QUESTIONS; q++) {
-      var base = bases[randInt(0, bases.length - 1)];
-      var factor = randInt(1, 10);
-      var isDivision = Math.random() < 0.5;
-      if (isDivision) {
-        var product = base * factor;
-        qs.push({ text: product + ' : ' + base + ' = ?', answer: factor });
-      } else {
-        qs.push({ text: factor + ' × ' + base + ' = ?', answer: base * factor });
-      }
+  // By shuffling the pool and taking the first questions off it, the same
+  // question can never come up twice in one game.
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = randInt(0, i);
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
     }
-    return qs;
+    return arr;
   }
 
-  // Optellen: a + b met a, b ≥ 1 en a + b ≤ 100.
-  // Aftrekken: a - b met b ≥ 1 en a - b ≥ 1, dus alles blijft tussen 0 en 100.
+  // Adds a question to the pool, but skips one that is already in it apart
+  // from the order of the numbers: to a child 3 × 4 and 4 × 3 are the same
+  // question, so it goes into the pool only once.
+  function addUnique(pool, seen, key, q) {
+    if (seen[key]) return;
+    seen[key] = true;
+    pool.push(q);
+  }
+
+  function pickQuestions(pool) {
+    return shuffle(pool).slice(0, Math.min(NUM_QUESTIONS, pool.length));
+  }
+
+  function buildTableQuestions() {
+    var bases = Array.from(selected);
+    var pool = [];
+    var seen = {};
+    bases.forEach(function (base) {
+      for (var factor = 1; factor <= 10; factor++) {
+        var lo = Math.min(base, factor), hi = Math.max(base, factor);
+        addUnique(pool, seen, 'x' + lo + '_' + hi,
+          { text: factor + ' × ' + base + ' = ?', answer: base * factor });
+        addUnique(pool, seen, 'd' + (base * factor) + '_' + base,
+          { text: (base * factor) + ' : ' + base + ' = ?', answer: factor });
+      }
+    });
+    return pickQuestions(pool);
+  }
+
+  // Addition: a + b with a, b >= 1 and a + b <= 100.
+  // Subtraction: a - b with b >= 1 and a - b >= 1, so everything stays
+  // between 0 and 100.
+  // The pool is far too large to build in full here, so we draw questions
+  // until there are enough different ones.
   function buildPlusMinusQuestions() {
-    var qs = [];
-    for (var q = 0; q < NUM_QUESTIONS; q++) {
-      var isMinus = Math.random() < 0.5;
-      if (isMinus) {
+    var pool = [];
+    var seen = {};
+    var tries = 0;
+    while (pool.length < NUM_QUESTIONS && tries < 1000) {
+      tries++;
+      if (Math.random() < 0.5) {
         var a = randInt(2, MAX_VALUE);
         var b = randInt(1, a - 1);
-        qs.push({ text: a + ' − ' + b + ' = ?', answer: a - b });
+        addUnique(pool, seen, 'm' + a + '_' + b,
+          { text: a + ' − ' + b + ' = ?', answer: a - b });
       } else {
         var x = randInt(1, MAX_VALUE - 1);
         var y = randInt(1, MAX_VALUE - x);
-        qs.push({ text: x + ' + ' + y + ' = ?', answer: x + y });
+        var lo = Math.min(x, y), hi = Math.max(x, y);
+        addUnique(pool, seen, 'p' + lo + '_' + hi,
+          { text: x + ' + ' + y + ' = ?', answer: x + y });
       }
     }
-    return qs;
+    return pickQuestions(pool);
   }
 
   function buildQuestions() {
@@ -424,6 +520,7 @@
   var nextBtn = document.getElementById('nextBtn');
 
   function show(el) {
+    document.body.classList.toggle('reading', el === resultEl);
     modeEl.classList.add('hidden');
     setupEl.classList.add('hidden');
     quizEl.classList.add('hidden');
@@ -458,7 +555,7 @@
 
   function renderQuestion() {
     var q = questions[current];
-    progressEl.textContent = 'Vraag ' + (current + 1) + ' van ' + NUM_QUESTIONS;
+    progressEl.textContent = 'Vraag ' + (current + 1) + ' van ' + questions.length;
     questionEl.textContent = q.text;
     answerInput.value = '';
     answerInput.className = 'answer-input';
@@ -493,22 +590,22 @@
     }
 
     checkBtn.classList.add('hidden');
-    nextBtn.textContent = (current + 1 < NUM_QUESTIONS) ? 'Volgende' : 'Bekijk resultaat';
+    nextBtn.textContent = (current + 1 < questions.length) ? 'Volgende' : 'Bekijk resultaat';
     nextBtn.classList.remove('hidden');
     nextBtn.focus();
   }
 
   function nextQuestion() {
     current++;
-    if (current < NUM_QUESTIONS) {
+    if (current < questions.length) {
       renderQuestion();
     } else {
       showResults();
     }
   }
 
-  // Antwoord verschijnt pas NA Enter (niet ervoor). preventDefault +
-  // stopPropagation zodat dezelfde Enter-toets niet meteen doorspringt.
+  // The answer only appears AFTER Enter (not before). preventDefault +
+  // stopPropagation so that the same Enter key does not skip straight on.
   answerInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -516,10 +613,10 @@
       submitAnswer();
     }
   });
-  // Naar de volgende vraag: via de knop (klik, of Enter/spatie als de knop
-  // focus heeft na het antwoorden).
+  // On to the next question: through the button (click, or Enter/space once
+  // the button has focus after answering).
   checkBtn.addEventListener('click', submitAnswer);
-  // Leeg antwoord kan niet verstuurd worden; de knop blijft dan uit.
+  // An empty answer cannot be submitted; the button stays disabled.
   answerInput.addEventListener('input', function () {
     checkBtn.disabled = answerInput.value.trim() === '';
   });
@@ -567,11 +664,11 @@
   var ctx = canvas.getContext('2d');
   var confettiPieces = [];
   var confettiRAF = null;
-  var W = 0, H = 0;             // afmetingen in CSS-pixels
+  var W = 0, H = 0;             // dimensions in CSS pixels
   var COLORS = ['#2563eb', '#16a34a', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
-  // Schaalt de bitmap mee met devicePixelRatio (anders wazig op retina) en
-  // met de schermgrootte (anders klopt het niet meer na draaien van de tablet).
+  // Scales the bitmap with devicePixelRatio (otherwise blurry on retina) and
+  // with the screen size (otherwise it is off after rotating the tablet).
   function sizeCanvas() {
     var dpr = window.devicePixelRatio || 1;
     W = window.innerWidth;
@@ -647,13 +744,13 @@
   document.getElementById('version').textContent = APP_VERSION;
 
   // --- Service worker ---
-  // Relatief pad: de site staat op /math-game/, niet op de root.
-  // updateViaCache 'none' zorgt dat een nieuwe sw.js niet achter de
-  // HTTP-cache van GitHub Pages blijft hangen.
+  // Relative path: the site lives at /math-game/, not at the root.
+  // updateViaCache 'none' keeps a new sw.js from getting stuck behind the
+  // HTTP cache of GitHub Pages.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
-        ['catch'](function () { /* offline werkt dan niet; spel wel */ });
+        ['catch'](function () { /* offline will not work then; the game still does */ });
     });
 
     var reloading = false;
