@@ -288,7 +288,10 @@
   .doodle-sun    { --doodle-opacity: .16; width: 170px; top: -56px; right: -54px; transform: rotate(8deg); }
   .doodle-hearts { --doodle-opacity: .22; width: 145px; top: 40%; left: -10px; transform: translateY(-50%) rotate(-8deg); }
   .doodle-bunny  { --doodle-opacity: .24; width: 100px; top: 64%; right: -18px; transform: translateY(-50%) rotate(8deg); }
-  .doodle-face   { --doodle-opacity: .30; width: 150px; bottom: -12px; left: -22px; transform: rotate(-6deg); }
+  /* Clear of the bottom 90-odd pixels: that is where a full-width button
+     lands once the list of answers is scrolled to its end, and on a phone
+     there is no side margin to dodge into. */
+  .doodle-face   { --doodle-opacity: .30; width: 140px; bottom: 108px; left: -16px; transform: rotate(-6deg); }
 
   /* Plenty of room beside the 640px column: bigger, and fully in view. */
   @media (min-width: 900px) {
